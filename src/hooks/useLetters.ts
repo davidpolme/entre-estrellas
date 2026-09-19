@@ -9,6 +9,7 @@ import {
   SEND_COMMUNITY_LETTER,
   SEND_DIRECT_LETTER,
   MARK_LETTER_READ,
+  LIST_USERS,
 } from '@/graphql/operations';
 
 const client = generateClient();
@@ -23,19 +24,20 @@ export function useLetters() {
   const fetchLetters = useCallback(async () => {
     if (!user || !sessionToken) return;
     try {
-      const [lettersRes, assignRes] = await Promise.all([
+      const [lettersRes, assignRes, usersRes] = await Promise.all([
         client.graphql({ query: LIST_LETTERS }) as any,
         client.graphql({
           query: GET_MY_ASSIGNMENT,
           variables: { senderId: user.userId },
         }) as any,
+        client.graphql({ query: LIST_USERS }) as any,
       ]);
       const allLetters: Letter[] = lettersRes.data.listLetters?.items ?? [];
-      // Filter to letters where current user is sender or recipient
-      const myLetters = allLetters.filter(
-        l => l.senderId === user.userId || l.recipientId === user.userId
-      );
-      // Add senderName from users list (we'll need to enrich this)
+      const users: { id: string; username: string }[] = usersRes.data.listUserProfiles?.items ?? [];
+      const usernames = new Map(users.map(profile => [profile.id, profile.username]));
+      const myLetters = allLetters
+        .filter(letter => letter.senderId === user.userId || letter.recipientId === user.userId)
+        .map(letter => ({ ...letter, senderName: usernames.get(letter.senderId) }));
       setLetters(myLetters);
       setAssignment(assignRes.data.getCommunityAssignment ?? null);
       setUnreadCount(myLetters.filter((l: Letter) => !l.readAt && l.recipientId === user.userId).length);
@@ -62,7 +64,11 @@ export function useLetters() {
       }
     }
     setupSubscriptions();
-    return () => { sub?.unsubscribe(); };
+    const refreshInterval = window.setInterval(fetchLetters, 15000);
+    return () => {
+      sub?.unsubscribe();
+      window.clearInterval(refreshInterval);
+    };
   }, [fetchLetters]);
 
   const sendCommunityLetter = useCallback(async (content: string): Promise<boolean> => {

@@ -145,16 +145,17 @@ export function ConstellationPage({ isAdmin, username, userId, onLogout, onAdmin
       {/* Inbox */}
       <Modal isOpen={showInbox} onClose={() => setShowInbox(false)} title="Mis cartas">
         <div className="space-y-3">
-          {letters.length === 0 ? (
-            <p className="text-white/40 text-center py-8">Aún no tienes cartas</p>
+          {letters.filter(letter => letter.recipientId === userId).length === 0 ? (
+            <p className="text-white/40 text-center py-8">Aún no tienes cartas recibidas</p>
           ) : (
-            [...letters]
+            letters
+              .filter(letter => letter.recipientId === userId)
               .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
               .map(letter => (
                 <LetterCard
                   key={letter.id}
                   letter={letter}
-                  isOwn={letter.recipientId === userId}
+                  received
                   onRead={markAsRead}
                 />
               ))

@@ -32,18 +32,9 @@ export async function handler(event: any) {
     if (content.length > 2000) throw new Error('El contenido es demasiado largo');
     if (senderId === recipientId) throw new Error('No puedes enviarte una carta a ti mismo');
 
-    const tableEvent = process.env.TABLE_EVENT!;
     const tableUserProfile = process.env.TABLE_USERPROFILE!;
     const tableLetter = process.env.TABLE_LETTER!;
     const tableConnection = process.env.TABLE_CONNECTION!;
-
-    const eventRes = await client.send(new GetCommand({
-      TableName: tableEvent,
-      Key: { id: 'current' },
-    }));
-    if (!eventRes.Item || eventRes.Item.status !== 'ACTIVE') {
-      throw new Error('El evento no está activo');
-    }
 
     const recipientRes = await client.send(new GetCommand({
       TableName: tableUserProfile,
@@ -51,14 +42,6 @@ export async function handler(event: any) {
     }));
     if (!recipientRes.Item) {
       throw new Error('El destinatario no existe');
-    }
-
-    const senderProfile = await client.send(new GetCommand({
-      TableName: tableUserProfile,
-      Key: { id: senderId },
-    }));
-    if (!senderProfile.Item?.communityLetterCompleted) {
-      throw new Error('Debes completar la carta comunitaria primero');
     }
 
     const now = new Date().toISOString();
