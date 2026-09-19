@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { createContext, useState, useEffect, useCallback, useContext, type ReactNode } from 'react';
 import { generateClient } from 'aws-amplify/api';
 import { LOGIN_USER, REGISTER_USER, GET_USER_BY_SESSION_TOKEN } from '@/graphql/operations';
 
@@ -11,13 +11,24 @@ interface AuthUser {
   starColor: string;
 }
 
+interface AuthContextValue {
+  user: AuthUser | null;
+  loading: boolean;
+  sessionToken: string | null;
+  isAdmin: boolean;
+  login: (username: string, password: string) => Promise<void>;
+  register: (username: string, password: string, starColor: string) => Promise<void>;
+  logout: () => Promise<void>;
+}
+
 const SESSION_KEY = 'entre_estrellas_session';
+const AuthContext = createContext<AuthContextValue | null>(null);
 
 function parseJsonResult<T>(value: T | string): T {
   return typeof value === 'string' ? JSON.parse(value) as T : value;
 }
 
-export function useAuth() {
+export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [loading, setLoading] = useState(true);
   const [sessionToken, setSessionToken] = useState<string | null>(null);
@@ -45,7 +56,6 @@ export function useAuth() {
     }
   }, []);
 
-  // Restore session on mount
   useEffect(() => {
     const storedToken = localStorage.getItem(SESSION_KEY);
     if (storedToken) {
@@ -93,5 +103,23 @@ export function useAuth() {
     setSessionToken(null);
   }, []);
 
-  return { user, loading, sessionToken, isAdmin: user?.isAdmin ?? false, login, register, logout, checkUser: () => {} };
+  return (
+    <AuthContext.Provider value={{
+      user,
+      loading,
+      sessionToken,
+      isAdmin: user?.isAdmin ?? false,
+      login,
+      register,
+      logout,
+    }}>
+      {children}
+    </AuthContext.Provider>
+  );
+}
+
+export function useAuth() {
+  const context = useContext(AuthContext);
+  if (!context) throw new Error('useAuth debe usarse dentro de AuthProvider');
+  return context;
 }

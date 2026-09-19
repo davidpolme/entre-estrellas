@@ -18,7 +18,7 @@ interface ConstellationPageProps {
 }
 
 export function ConstellationPage({ isAdmin, username, userId, onLogout, onAdminPanel }: ConstellationPageProps) {
-  const { users, connections, loading, selectedUserId, selectUser } = useConstellation();
+  const { users, connections, loading, selectedUserId, selectUser, refresh: refreshConstellation } = useConstellation();
   const { letters, assignment, unreadCount, sendCommunityLetter, sendDirectLetter, markAsRead, loading: lettersLoading } = useLetters();
   const { status } = useEvent();
 
@@ -132,7 +132,11 @@ export function ConstellationPage({ isAdmin, username, userId, onLogout, onAdmin
           <LetterEditor
             type="direct"
             recipientName={letterRecipient.name}
-            onSend={(content) => sendDirectLetter(letterRecipient.id, content)}
+            onSend={async (content) => {
+              const sent = await sendDirectLetter(letterRecipient.id, content);
+              if (sent) await refreshConstellation();
+              return sent;
+            }}
             onCancel={() => { setShowLetterEditor(false); setLetterRecipient(null); }}
           />
         )}

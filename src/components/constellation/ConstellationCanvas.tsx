@@ -195,36 +195,25 @@ export function ConstellationCanvas({
     const x = (clientX - rect.left - offset.x) / scale;
     const y = (clientY - rect.top - offset.y) / scale;
 
-    const currentUser = users.find(u => u.id === currentUserId);
-    const others = users.filter(u => u.id !== currentUserId);
-    const cx = dimensions.width / 2;
-    const cy = dimensions.height / 2;
-    const radius = Math.min(dimensions.width, dimensions.height) * 0.35;
-
-    const positions: Record<string, { x: number; y: number }> = {};
-    if (currentUser) positions[currentUser.id] = { x: cx, y: cy };
-    others.forEach((user, i) => {
-      const angle = (2 * Math.PI * i) / others.length;
-      const r = radius * (0.6 + ((user.id.charCodeAt(0) % 5) / 10));
-      positions[user.id] = { x: cx + Math.cos(angle) * r, y: cy + Math.sin(angle) * r };
-    });
+    const positions = layoutPositions();
 
     for (const [userId, pos] of Object.entries(positions)) {
       const dist = Math.sqrt((x - pos.x) ** 2 + (y - pos.y) ** 2);
       if (dist < 20) return userId;
     }
     return null;
-  }, [users, currentUserId, dimensions, scale, offset]);
+  }, [layoutPositions, scale, offset]);
 
   const handlePointerDown = useCallback((e: React.PointerEvent) => {
     const userId = getStarAtPosition(e.clientX, e.clientY);
     if (userId) {
       onSelectUser(userId === selectedUserId ? null : userId);
+      if (userId !== currentUserId) onWriteLetter(userId);
     } else {
       setIsDragging(true);
       setDragStart({ x: e.clientX - offset.x, y: e.clientY - offset.y });
     }
-  }, [getStarAtPosition, selectedUserId, onSelectUser, offset]);
+  }, [getStarAtPosition, selectedUserId, currentUserId, onSelectUser, onWriteLetter, offset]);
 
   const handlePointerMove = useCallback((e: React.PointerEvent) => {
     if (isDragging) {
@@ -282,7 +271,7 @@ export function ConstellationCanvas({
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
-        onPointerLeave={handlePointerUp}
+        onPointerLeave={() => { handlePointerUp(); setHoveredUser(null); setShowTooltip(false); }}
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
       />
