@@ -9,12 +9,22 @@ import { v4 as uuidv4 } from 'uuid';
 
 const client = DynamoDBDocumentClient.from(new DynamoDBClient({}));
 
+async function resolveSession(sessionToken: string): Promise<string> {
+  const tableSession = process.env.TABLE_SESSION!;
+  const res = await client.send(new GetCommand({
+    TableName: tableSession,
+    Key: { token: sessionToken },
+  }));
+  if (!res.Item) throw new Error('Sesión inválida o expirada');
+  return res.Item.userId;
+}
+
 export async function handler(event: any) {
   try {
-    const identity = event.identity;
-    if (!identity) throw new Error('No autenticado');
+    const sessionToken = event.arguments.sessionToken;
+    if (!sessionToken) throw new Error('No autenticado');
 
-    const senderId = identity.claims.sub ?? identity.username;
+    const senderId = await resolveSession(sessionToken);
     const content: string = event.arguments.content;
 
     if (!content?.trim()) throw new Error('El contenido no puede estar vacío');

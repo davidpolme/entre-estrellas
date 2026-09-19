@@ -1,6 +1,6 @@
 export const GET_EVENT = `
   query GetEvent {
-    getEvent {
+    getEvent(id: "current") {
       id
       status
       startedAt
@@ -11,7 +11,7 @@ export const GET_EVENT = `
 
 export const LIST_USERS = `
   query ListUsers {
-    listUsers {
+    listUserProfiles {
       id
       username
       starColor
@@ -21,23 +21,15 @@ export const LIST_USERS = `
   }
 `;
 
-export const GET_MY_PROFILE = `
-  query GetMyProfile {
-    getMyProfile {
-      id
-      username
-      starColor
-      x
-      y
-      communityLetterCompleted
-      createdAt
-    }
+export const GET_USER_BY_SESSION_TOKEN = `
+  query GetUserBySessionToken($sessionToken: String!) {
+    getUserBySessionToken(sessionToken: $sessionToken)
   }
 `;
 
-export const GET_MY_CONNECTIONS = `
-  query GetMyConnections {
-    getMyConnections {
+export const LIST_CONNECTIONS = `
+  query ListConnections {
+    listConnections {
       id
       userAId
       userBId
@@ -48,9 +40,9 @@ export const GET_MY_CONNECTIONS = `
   }
 `;
 
-export const GET_MY_LETTERS = `
-  query GetMyLetters {
-    getMyLetters {
+export const LIST_LETTERS = `
+  query ListLetters {
+    listLetters {
       id
       senderId
       recipientId
@@ -58,14 +50,13 @@ export const GET_MY_LETTERS = `
       content
       createdAt
       readAt
-      senderName
     }
   }
 `;
 
 export const GET_MY_ASSIGNMENT = `
-  query GetMyAssignment {
-    getMyAssignment {
+  query GetMyAssignment($senderId: ID!) {
+    getCommunityAssignment(senderId: $senderId) {
       senderId
       recipientId
       completed
@@ -76,35 +67,26 @@ export const GET_MY_ASSIGNMENT = `
 `;
 
 export const GET_ADMIN_STATS = `
-  query GetAdminStats {
-    getAdminStats {
-      totalParticipants
-      colorDistribution
-      eventStatus
-      communityLettersSent
-      totalLetters
-      totalConnections
-    }
+  query GetAdminStats($sessionToken: String!) {
+    getAdminStats(sessionToken: $sessionToken)
   }
 `;
 
 export const REGISTER_USER = `
-  mutation RegisterUser($input: RegisterUserInput!) {
-    registerUser(input: $input) {
-      id
-      username
-      starColor
-      x
-      y
-      communityLetterCompleted
-      createdAt
-    }
+  mutation RegisterUser($username: String!, $password: String!, $starColor: String!) {
+    registerUser(username: $username, password: $password, starColor: $starColor)
+  }
+`;
+
+export const LOGIN_USER = `
+  mutation LoginUser($username: String!, $password: String!) {
+    loginUser(username: $username, password: $password)
   }
 `;
 
 export const SEND_COMMUNITY_LETTER = `
-  mutation SendCommunityLetter($content: String!) {
-    sendCommunityLetter(content: $content) {
+  mutation SendCommunityLetter($content: String!, $sessionToken: String!) {
+    sendCommunityLetter(content: $content, sessionToken: $sessionToken) {
       id
       senderId
       recipientId
@@ -116,8 +98,8 @@ export const SEND_COMMUNITY_LETTER = `
 `;
 
 export const SEND_DIRECT_LETTER = `
-  mutation SendDirectLetter($recipientId: ID!, $content: String!) {
-    sendDirectLetter(recipientId: $recipientId, content: $content) {
+  mutation SendDirectLetter($recipientId: ID!, $content: String!, $sessionToken: String!) {
+    sendDirectLetter(recipientId: $recipientId, content: $content, sessionToken: $sessionToken) {
       id
       senderId
       recipientId
@@ -129,8 +111,8 @@ export const SEND_DIRECT_LETTER = `
 `;
 
 export const START_EVENT = `
-  mutation StartEvent {
-    startEvent {
+  mutation StartEvent($sessionToken: String!) {
+    startEvent(sessionToken: $sessionToken) {
       id
       status
       startedAt
@@ -140,8 +122,8 @@ export const START_EVENT = `
 `;
 
 export const FINISH_EVENT = `
-  mutation FinishEvent {
-    finishEvent {
+  mutation FinishEvent($sessionToken: String!) {
+    finishEvent(sessionToken: $sessionToken) {
       id
       status
       startedAt
@@ -151,8 +133,8 @@ export const FINISH_EVENT = `
 `;
 
 export const MARK_LETTER_READ = `
-  mutation MarkLetterRead($letterId: ID!) {
-    markLetterRead(letterId: $letterId) {
+  mutation MarkLetterRead($letterId: ID!, $sessionToken: String!) {
+    markLetterRead(letterId: $letterId, sessionToken: $sessionToken) {
       id
       readAt
     }
@@ -161,7 +143,7 @@ export const MARK_LETTER_READ = `
 
 export const ON_USER_JOINED = `
   subscription OnUserJoined {
-    onUserJoined {
+    onCreateUserProfile {
       id
       username
       starColor
@@ -173,7 +155,7 @@ export const ON_USER_JOINED = `
 
 export const ON_LETTER_CREATED = `
   subscription OnLetterCreated {
-    onLetterCreated {
+    onCreateLetter {
       id
       senderId
       recipientId
@@ -185,7 +167,7 @@ export const ON_LETTER_CREATED = `
 
 export const ON_CONNECTION_CREATED = `
   subscription OnConnectionCreated {
-    onConnectionCreated {
+    onCreateConnection {
       id
       userAId
       userBId
@@ -198,7 +180,7 @@ export const ON_CONNECTION_CREATED = `
 
 export const ON_CONNECTION_UPDATED = `
   subscription OnConnectionUpdated {
-    onConnectionUpdated {
+    onUpdateConnection {
       id
       userAId
       userBId
@@ -211,7 +193,7 @@ export const ON_CONNECTION_UPDATED = `
 
 export const ON_EVENT_UPDATED = `
   subscription OnEventUpdated {
-    onEventUpdated {
+    onUpdateEvent {
       id
       status
       startedAt

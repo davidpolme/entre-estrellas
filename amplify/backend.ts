@@ -1,6 +1,5 @@
 import { defineBackend } from '@aws-amplify/backend';
 import { PolicyStatement } from 'aws-cdk-lib/aws-iam';
-import { auth } from './auth/resource';
 import { data } from './data/resource';
 import { startEventFn } from './functions/startEventFn/resource';
 import { finishEventFn } from './functions/finishEventFn/resource';
@@ -8,10 +7,11 @@ import { sendCommunityLetterFn } from './functions/sendCommunityLetterFn/resourc
 import { sendDirectLetterFn } from './functions/sendDirectLetterFn/resource';
 import { markLetterReadFn } from './functions/markLetterReadFn/resource';
 import { registerUserFn } from './functions/registerUserFn/resource';
+import { loginUserFn } from './functions/loginUserFn/resource';
+import { getUserBySessionTokenFn } from './functions/getUserBySessionTokenFn/resource';
 import { getAdminStatsFn } from './functions/getAdminStatsFn/resource';
 
 const backend = defineBackend({
-  auth,
   data,
   startEventFn,
   finishEventFn,
@@ -19,6 +19,8 @@ const backend = defineBackend({
   sendDirectLetterFn,
   markLetterReadFn,
   registerUserFn,
+  loginUserFn,
+  getUserBySessionTokenFn,
   getAdminStatsFn,
 });
 
@@ -31,6 +33,8 @@ const allFunctions = [
   backend.sendDirectLetterFn,
   backend.markLetterReadFn,
   backend.registerUserFn,
+  backend.loginUserFn,
+  backend.getUserBySessionTokenFn,
   backend.getAdminStatsFn,
 ];
 

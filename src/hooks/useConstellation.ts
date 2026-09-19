@@ -1,7 +1,8 @@
 import { generateClient } from 'aws-amplify/api';
 import { useState, useEffect, useCallback } from 'react';
 import type { ConstellationUser, Connection } from '@/types';
-import { LIST_USERS, GET_MY_CONNECTIONS, ON_USER_JOINED, ON_CONNECTION_CREATED, ON_CONNECTION_UPDATED } from '@/graphql/operations';
+import { useAuth } from '@/hooks/useAuth';
+import { LIST_USERS, LIST_CONNECTIONS, ON_USER_JOINED, ON_CONNECTION_CREATED, ON_CONNECTION_UPDATED } from '@/graphql/operations';
 
 const client = generateClient();
 
@@ -13,6 +14,7 @@ interface ConstellationData {
 }
 
 export function useConstellation() {
+  const { user } = useAuth();
   const [data, setData] = useState<ConstellationData>({
     users: [],
     connections: [],
@@ -25,18 +27,24 @@ export function useConstellation() {
     try {
       const [usersRes, connectionsRes] = await Promise.all([
         client.graphql({ query: LIST_USERS }) as any,
-        client.graphql({ query: GET_MY_CONNECTIONS }) as any,
+        client.graphql({ query: LIST_CONNECTIONS }) as any,
       ]);
+      const allUsers: ConstellationUser[] = usersRes.data.listUserProfiles ?? [];
+      const allConnections: Connection[] = connectionsRes.data.listConnections ?? [];
+      // Filter to only current user's connections
+      const myConnections = user
+        ? allConnections.filter(c => c.userAId === user.userId || c.userBId === user.userId)
+        : [];
       setData({
-        users: usersRes.data.listUsers ?? [],
-        connections: connectionsRes.data.getMyConnections ?? [],
+        users: allUsers,
+        connections: myConnections,
         loading: false,
         error: null,
       });
     } catch {
       setData(prev => ({ ...prev, loading: false, error: 'Error al cargar la constelación' }));
     }
-  }, []);
+  }, [user]);
 
   useEffect(() => {
     fetchConstellation();
@@ -51,7 +59,7 @@ export function useConstellation() {
       try {
         userSub = (client as any).graphql({ query: ON_USER_JOINED }).subscribe({
           next: (event: any) => {
-            const newUser = event.data.onUserCreated ?? event.data.onUserJoined;
+            const newUser = event.data.onCreateUserProfile ?? event.data.onUserJoined;
             if (newUser) {
               setData(prev => ({
                 ...prev,
@@ -63,7 +71,7 @@ export function useConstellation() {
 
         connSub = (client as any).graphql({ query: ON_CONNECTION_CREATED }).subscribe({
           next: (event: any) => {
-            const conn = event.data.onConnectionCreated;
+            const conn = event.data.onCreateConnection;
             if (conn) {
               setData(prev => ({
                 ...prev,
@@ -75,7 +83,7 @@ export function useConstellation() {
 
         connUpdSub = (client as any).graphql({ query: ON_CONNECTION_UPDATED }).subscribe({
           next: (event: any) => {
-            const conn = event.data.onConnectionUpdated;
+            const conn = event.data.onUpdateConnection;
             if (conn) {
               setData(prev => ({
                 ...prev,

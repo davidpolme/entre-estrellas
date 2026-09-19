@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useAuth } from '@/hooks/useAuth';
 import { useConstellation } from '@/hooks/useConstellation';
 import { useLetters } from '@/hooks/useLetters';
 import { useEvent } from '@/hooks/useEvent';
@@ -38,7 +37,6 @@ export function ConstellationPage({ isAdmin, username, userId, onLogout, onAdmin
   }, [status, communityCompleted, lettersLoading]);
 
   const currentUserProfile = users.find(u => u.id === userId);
-  let myConnections = connections.filter(c => c.userAId === userId || c.userBId === userId);
 
   const handleWriteLetter = (targetUserId: string) => {
     const target = users.find(u => u.id === targetUserId);
@@ -49,7 +47,6 @@ export function ConstellationPage({ isAdmin, username, userId, onLogout, onAdmin
   };
 
   const isActive = status === 'ACTIVE';
-  const isFinished = status === 'FINISHED';
 
   return (
     <div className="relative w-full h-dvh flex flex-col">

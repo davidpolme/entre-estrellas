@@ -7,12 +7,22 @@ import {
 
 const client = DynamoDBDocumentClient.from(new DynamoDBClient({}));
 
+async function resolveSession(sessionToken: string): Promise<string> {
+  const tableSession = process.env.TABLE_SESSION!;
+  const res = await client.send(new GetCommand({
+    TableName: tableSession,
+    Key: { token: sessionToken },
+  }));
+  if (!res.Item) throw new Error('Sesión inválida o expirada');
+  return res.Item.userId;
+}
+
 export async function handler(event: any) {
   try {
-    const identity = event.identity;
-    if (!identity) throw new Error('No autenticado');
+    const sessionToken = event.arguments.sessionToken;
+    if (!sessionToken) throw new Error('No autenticado');
 
-    const userId = identity.claims.sub ?? identity.username;
+    const userId = await resolveSession(sessionToken);
     const letterId: string = event.arguments.letterId;
 
     const tableLetter = process.env.TABLE_LETTER!;

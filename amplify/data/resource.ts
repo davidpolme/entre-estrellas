@@ -5,6 +5,8 @@ import { sendCommunityLetterFn } from '../functions/sendCommunityLetterFn/resour
 import { sendDirectLetterFn } from '../functions/sendDirectLetterFn/resource';
 import { markLetterReadFn } from '../functions/markLetterReadFn/resource';
 import { registerUserFn } from '../functions/registerUserFn/resource';
+import { loginUserFn } from '../functions/loginUserFn/resource';
+import { getUserBySessionTokenFn } from '../functions/getUserBySessionTokenFn/resource';
 import { getAdminStatsFn } from '../functions/getAdminStatsFn/resource';
 
 const schema = a.schema({
@@ -16,17 +18,23 @@ const schema = a.schema({
     .model({
       id: a.id().required(),
       username: a.string().required(),
+      passwordHash: a.string(),
       starColor: a.ref('StarColor').required(),
       x: a.float(),
       y: a.float(),
       communityLetterCompleted: a.boolean().required().default(false),
+      isAdmin: a.boolean().default(false),
       createdAt: a.datetime().required(),
     })
-    .authorization(allow => [
-      allow.owner().to(['create', 'read', 'update']),
-      allow.groups(['admins']).to(['read', 'update']),
-      allow.authenticated().to(['read']),
-    ]),
+    .authorization(allow => [allow.publicApiKey()]),
+
+  Session: a
+    .model({
+      token: a.id().required(),
+      userId: a.id().required(),
+      createdAt: a.datetime().required(),
+    })
+    .authorization(allow => [allow.publicApiKey()]),
 
   Connection: a
     .model({
@@ -37,10 +45,7 @@ const schema = a.schema({
       createdAt: a.datetime().required(),
       updatedAt: a.datetime().required(),
     })
-    .authorization(allow => [
-      allow.authenticated().to(['read']),
-      allow.groups(['admins']).to(['read']),
-    ]),
+    .authorization(allow => [allow.publicApiKey()]),
 
   Letter: a
     .model({
@@ -52,11 +57,7 @@ const schema = a.schema({
       createdAt: a.datetime().required(),
       readAt: a.datetime(),
     })
-    .authorization(allow => [
-      allow.ownerDefinedIn('recipientId').to(['read']),
-      allow.ownerDefinedIn('senderId').to(['read']),
-      allow.groups(['admins']).to(['read']),
-    ]),
+    .authorization(allow => [allow.publicApiKey()]),
 
   CommunityAssignment: a
     .model({
@@ -66,10 +67,7 @@ const schema = a.schema({
       createdAt: a.datetime().required(),
       completedAt: a.datetime(),
     })
-    .authorization(allow => [
-      allow.ownerDefinedIn('senderId').to(['read', 'update']),
-      allow.groups(['admins']).to(['read', 'update', 'delete']),
-    ]),
+    .authorization(allow => [allow.publicApiKey()]),
 
   Event: a
     .model({
@@ -78,58 +76,73 @@ const schema = a.schema({
       startedAt: a.datetime(),
       finishedAt: a.datetime(),
     })
-    .authorization(allow => [
-      allow.authenticated().to(['read']),
-      allow.groups(['admins']).to(['create', 'read', 'update', 'delete']),
-    ]),
+    .authorization(allow => [allow.publicApiKey()]),
 
-  // Custom mutations — function-backed
+  // Auth mutations
+  registerUser: a
+    .mutation()
+    .arguments({ username: a.string().required(), password: a.string().required(), starColor: a.string().required() })
+    .returns(a.json().required())
+    .authorization(allow => [allow.publicApiKey()])
+    .handler(a.handler.function(registerUserFn)),
+
+  loginUser: a
+    .mutation()
+    .arguments({ username: a.string().required(), password: a.string().required() })
+    .returns(a.json().required())
+    .authorization(allow => [allow.publicApiKey()])
+    .handler(a.handler.function(loginUserFn)),
+
+  getUserBySessionToken: a
+    .query()
+    .arguments({ sessionToken: a.string().required() })
+    .returns(a.json().required())
+    .authorization(allow => [allow.publicApiKey()])
+    .handler(a.handler.function(getUserBySessionTokenFn)),
+
+  // Event mutations
   startEvent: a
     .mutation()
-    .arguments({})
+    .arguments({ sessionToken: a.string().required() })
     .returns(a.ref('Event').required())
-    .authorization(allow => [allow.groups(['admins'])])
+    .authorization(allow => [allow.publicApiKey()])
     .handler(a.handler.function(startEventFn)),
 
   finishEvent: a
     .mutation()
-    .arguments({})
+    .arguments({ sessionToken: a.string().required() })
     .returns(a.ref('Event').required())
-    .authorization(allow => [allow.groups(['admins'])])
+    .authorization(allow => [allow.publicApiKey()])
     .handler(a.handler.function(finishEventFn)),
 
+  // Letter mutations
   sendCommunityLetter: a
     .mutation()
-    .arguments({ content: a.string().required() })
+    .arguments({ content: a.string().required(), sessionToken: a.string().required() })
     .returns(a.ref('Letter').required())
-    .authorization(allow => [allow.authenticated()])
+    .authorization(allow => [allow.publicApiKey()])
     .handler(a.handler.function(sendCommunityLetterFn)),
 
   sendDirectLetter: a
     .mutation()
-    .arguments({ recipientId: a.id().required(), content: a.string().required() })
+    .arguments({ recipientId: a.id().required(), content: a.string().required(), sessionToken: a.string().required() })
     .returns(a.ref('Letter').required())
-    .authorization(allow => [allow.authenticated()])
+    .authorization(allow => [allow.publicApiKey()])
     .handler(a.handler.function(sendDirectLetterFn)),
 
   markLetterRead: a
     .mutation()
-    .arguments({ letterId: a.id().required() })
+    .arguments({ letterId: a.id().required(), sessionToken: a.string().required() })
     .returns(a.ref('Letter').required())
-    .authorization(allow => [allow.authenticated()])
+    .authorization(allow => [allow.publicApiKey()])
     .handler(a.handler.function(markLetterReadFn)),
 
-  registerUser: a
-    .mutation()
-    .arguments({ input: a.json().required() })
-    .returns(a.ref('UserProfile').required())
-    .authorization(allow => [allow.authenticated()])
-    .handler(a.handler.function(registerUserFn)),
-
+  // Admin
   getAdminStats: a
     .query()
+    .arguments({ sessionToken: a.string().required() })
     .returns(a.json().required())
-    .authorization(allow => [allow.groups(['admins'])])
+    .authorization(allow => [allow.publicApiKey()])
     .handler(a.handler.function(getAdminStatsFn)),
 });
 
@@ -138,6 +151,6 @@ export type Schema = ClientSchema<typeof schema>;
 export const data = defineData({
   schema,
   authorizationModes: {
-    defaultAuthorizationMode: 'userPool',
+    defaultAuthorizationMode: 'apiKey',
   },
 });

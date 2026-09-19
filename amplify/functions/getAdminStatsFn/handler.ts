@@ -7,8 +7,32 @@ import {
 
 const client = DynamoDBDocumentClient.from(new DynamoDBClient({}));
 
+async function resolveSession(sessionToken: string): Promise<{ userId: string; isAdmin: boolean }> {
+  const tableSession = process.env.TABLE_SESSION!;
+  const tableUserProfile = process.env.TABLE_USERPROFILE!;
+  const sessionRes = await client.send(new GetCommand({
+    TableName: tableSession,
+    Key: { token: sessionToken },
+  }));
+  if (!sessionRes.Item) throw new Error('Sesión inválida o expirada');
+
+  const userRes = await client.send(new GetCommand({
+    TableName: tableUserProfile,
+    Key: { id: sessionRes.Item.userId },
+  }));
+  if (!userRes.Item) throw new Error('Usuario no encontrado');
+
+  return { userId: sessionRes.Item.userId, isAdmin: userRes.Item.isAdmin ?? false };
+}
+
 export async function handler(event: any) {
   try {
+    const sessionToken = event.arguments.sessionToken;
+    if (!sessionToken) throw new Error('No autenticado');
+
+    const { isAdmin } = await resolveSession(sessionToken);
+    if (!isAdmin) throw new Error('No tienes permisos de administrador');
+
     const tableUserProfile = process.env.TABLE_USERPROFILE!;
     const tableLetter = process.env.TABLE_LETTER!;
     const tableConnection = process.env.TABLE_CONNECTION!;

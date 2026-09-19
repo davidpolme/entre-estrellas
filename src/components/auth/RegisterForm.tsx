@@ -1,12 +1,8 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { StarColorPicker } from '@/components/ui/StarColorPicker';
-import { signUp, signIn } from 'aws-amplify/auth';
-import { generateClient } from 'aws-amplify/api';
+import { useAuth } from '@/hooks/useAuth';
 import type { StarColor } from '@/types';
-import { REGISTER_USER } from '@/graphql/operations';
-
-const client = generateClient();
 
 interface RegisterFormProps {
   onRegister: () => void;
@@ -20,6 +16,7 @@ export function RegisterForm({ onRegister, onSwitchToLogin }: RegisterFormProps)
   const [starColor, setStarColor] = useState<StarColor>('blue');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const { register } = useAuth();
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -31,31 +28,7 @@ export function RegisterForm({ onRegister, onSwitchToLogin }: RegisterFormProps)
 
     setLoading(true);
     try {
-      // Create Cognito user (no email required)
-      await signUp({
-        username,
-        password,
-        options: {
-          userAttributes: { preferred_username: username },
-          autoSignIn: true,
-        },
-      });
-
-      // Auto sign in
-      await signIn({ username, password });
-
-      // Create UserProfile in DynamoDB
-      try {
-        await (client.graphql({
-          query: REGISTER_USER,
-          variables: {
-            input: JSON.stringify({ username: username.trim(), starColor }),
-          },
-        }) as any);
-      } catch {
-        // Profile created on first login, ignore race
-      }
-
+      await register(username, password, starColor);
       onRegister();
     } catch (err: any) {
       setError(err?.message ?? 'Error al registrarse');

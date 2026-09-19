@@ -28,9 +28,8 @@ jobs:
         run: npm run build
         env:
           VITE_AWS_REGION: ${{ secrets.VITE_AWS_REGION }}
-          VITE_USER_POOL_ID: ${{ secrets.VITE_USER_POOL_ID }}
-          VITE_USER_POOL_CLIENT_ID: ${{ secrets.VITE_USER_POOL_CLIENT_ID }}
           VITE_APPSYNC_ENDPOINT: ${{ secrets.VITE_APPSYNC_ENDPOINT }}
+          VITE_APPSYNC_API_KEY: ${{ secrets.VITE_APPSYNC_API_KEY }}
 
       - name: Deploy backend
         run: npx amplify pipeline-deploy --branch main

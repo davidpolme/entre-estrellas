@@ -3,11 +3,27 @@ import {
   DynamoDBDocumentClient,
   ScanCommand,
   TransactWriteCommand,
-  PutCommand,
-  UpdateCommand,
+  GetCommand,
 } from '@aws-sdk/lib-dynamodb';
 
 const client = DynamoDBDocumentClient.from(new DynamoDBClient({}));
+
+async function resolveAdmin(sessionToken: string): Promise<void> {
+  const tableSession = process.env.TABLE_SESSION!;
+  const tableUserProfile = process.env.TABLE_USERPROFILE!;
+
+  const sessionRes = await client.send(new GetCommand({
+    TableName: tableSession,
+    Key: { token: sessionToken },
+  }));
+  if (!sessionRes.Item) throw new Error('Sesión inválida o expirada');
+
+  const userRes = await client.send(new GetCommand({
+    TableName: tableUserProfile,
+    Key: { id: sessionRes.Item.userId },
+  }));
+  if (!userRes.Item?.isAdmin) throw new Error('No tienes permisos de administrador');
+}
 
 function getTable(name: string): string {
   return process.env[name] ?? '';
@@ -32,6 +48,10 @@ function generateDerangement(n: number): number[] | null {
 
 export async function handler(event: any) {
   try {
+    const sessionToken = event.arguments.sessionToken;
+    if (!sessionToken) throw new Error('No autenticado');
+    await resolveAdmin(sessionToken);
+
     const tableUserProfile = getTable('TABLE_USERPROFILE');
     const tableAssignment = getTable('TABLE_COMMUNITYASSIGNMENT');
     const tableEvent = getTable('TABLE_EVENT');

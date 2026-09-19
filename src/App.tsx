@@ -11,7 +11,7 @@ type Screen = 'loading' | 'login' | 'constellation' | 'admin';
 
 export default function App() {
   const [screen, setScreen] = useState<Screen>('loading');
-  const { user, loading, isAdmin, logout, checkUser } = useAuth();
+  const { user, loading, isAdmin, logout } = useAuth();
 
   useEffect(() => {
     if (!loading) {
@@ -28,7 +28,7 @@ export default function App() {
   }
 
   if (screen === 'login') {
-    return <LoginPage onAuth={() => { checkUser(); setScreen('constellation'); }} />;
+    return <LoginPage onAuth={() => setScreen('constellation')} />;
   }
 
   if (screen === 'admin') {

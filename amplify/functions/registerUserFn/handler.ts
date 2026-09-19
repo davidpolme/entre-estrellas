@@ -3,49 +3,74 @@ import {
   DynamoDBDocumentClient,
   PutCommand,
 } from '@aws-sdk/lib-dynamodb';
+import { randomBytes, scryptSync } from 'crypto';
+import { v4 as uuidv4 } from 'uuid';
 
 const client = DynamoDBDocumentClient.from(new DynamoDBClient({}));
 
+function hashPassword(password: string): string {
+  const salt = randomBytes(16).toString('hex');
+  const hash = scryptSync(password, salt, 64).toString('hex');
+  return `${salt}:${hash}`;
+}
+
+function generateToken(): string {
+  return randomBytes(24).toString('hex');
+}
+
 export async function handler(event: any) {
   try {
-    const identity = event.identity;
-    if (!identity) throw new Error('No autenticado');
-
-    const userId = identity.claims.sub ?? identity.username;
-    const input = typeof event.arguments.input === 'string'
-      ? JSON.parse(event.arguments.input)
-      : event.arguments.input;
-
-    const { username, starColor } = input;
+    const { username, password, starColor } = event.arguments;
 
     if (!username?.trim()) throw new Error('Nombre de usuario requerido');
+    if (!password || password.length < 6) throw new Error('La contraseña debe tener al menos 6 caracteres');
     if (!starColor) throw new Error('Color de estrella requerido');
 
-    const now = new Date().toISOString();
     const validColors = ['blue', 'white', 'yellow', 'orange', 'red'];
     if (!validColors.includes(starColor)) throw new Error('Color inválido');
+
+    const tableUserProfile = process.env.TABLE_USERPROFILE!;
+    const tableSession = process.env.TABLE_SESSION!;
+    const tableEvent = process.env.TABLE_EVENT!;
+
+    const userId = uuidv4();
+    const now = new Date().toISOString();
+    const passwordHash = hashPassword(password);
+    const token = generateToken();
 
     const hashCode = userId.split('').reduce((acc, c) => acc + c.charCodeAt(0), 0);
     const x = ((hashCode % 100) / 100) * 0.3 + 0.35;
     const y = ((hashCode * 7 % 100) / 100) * 0.3 + 0.35;
 
-    const tableUserProfile = process.env.TABLE_USERPROFILE!;
-    const tableEvent = process.env.TABLE_EVENT!;
-
+    // Create UserProfile
     await client.send(new PutCommand({
       TableName: tableUserProfile,
       Item: {
         id: userId,
-        username,
+        username: username.trim(),
+        passwordHash,
         starColor,
         x,
         y,
         communityLetterCompleted: false,
+        isAdmin: false,
         createdAt: now,
       },
       ConditionExpression: 'attribute_not_exists(id)',
     }));
 
+    // Create session
+    await client.send(new PutCommand({
+      TableName: tableSession,
+      Item: {
+        token,
+        userId,
+        createdAt: now,
+      },
+      ConditionExpression: 'attribute_not_exists(token)',
+    }));
+
+    // Create Event table entry if not exists
     try {
       await client.send(new PutCommand({
         TableName: tableEvent,
@@ -62,13 +87,17 @@ export async function handler(event: any) {
     }
 
     return {
-      id: userId,
-      username,
-      starColor,
-      x,
-      y,
-      communityLetterCompleted: false,
-      createdAt: now,
+      token,
+      user: {
+        id: userId,
+        username: username.trim(),
+        starColor,
+        x,
+        y,
+        communityLetterCompleted: false,
+        isAdmin: false,
+        createdAt: now,
+      },
     };
   } catch (error: any) {
     console.error('registerUser error:', error);
