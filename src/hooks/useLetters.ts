@@ -30,7 +30,7 @@ export function useLetters() {
           variables: { senderId: user.userId },
         }) as any,
       ]);
-      const allLetters: Letter[] = lettersRes.data.listLetters ?? [];
+      const allLetters: Letter[] = lettersRes.data.listLetters?.items ?? [];
       // Filter to letters where current user is sender or recipient
       const myLetters = allLetters.filter(
         l => l.senderId === user.userId || l.recipientId === user.userId

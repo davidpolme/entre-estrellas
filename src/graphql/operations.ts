@@ -12,11 +12,13 @@ export const GET_EVENT = `
 export const LIST_USERS = `
   query ListUsers {
     listUserProfiles {
-      id
-      username
-      starColor
-      x
-      y
+      items {
+        id
+        username
+        starColor
+        x
+        y
+      }
     }
   }
 `;
@@ -30,12 +32,14 @@ export const GET_USER_BY_SESSION_TOKEN = `
 export const LIST_CONNECTIONS = `
   query ListConnections {
     listConnections {
-      id
-      userAId
-      userBId
-      letterCount
-      createdAt
-      updatedAt
+      items {
+        id
+        userAId
+        userBId
+        letterCount
+        createdAt
+        updatedAt
+      }
     }
   }
 `;
@@ -43,13 +47,15 @@ export const LIST_CONNECTIONS = `
 export const LIST_LETTERS = `
   query ListLetters {
     listLetters {
-      id
-      senderId
-      recipientId
-      type
-      content
-      createdAt
-      readAt
+      items {
+        id
+        senderId
+        recipientId
+        type
+        content
+        createdAt
+        readAt
+      }
     }
   }
 `;

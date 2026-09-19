@@ -29,8 +29,8 @@ export function useConstellation() {
         client.graphql({ query: LIST_USERS }) as any,
         client.graphql({ query: LIST_CONNECTIONS }) as any,
       ]);
-      const allUsers: ConstellationUser[] = usersRes.data.listUserProfiles ?? [];
-      const allConnections: Connection[] = connectionsRes.data.listConnections ?? [];
+      const allUsers: ConstellationUser[] = usersRes.data.listUserProfiles?.items ?? [];
+      const allConnections: Connection[] = connectionsRes.data.listConnections?.items ?? [];
       // Filter to only current user's connections
       const myConnections = user
         ? allConnections.filter(c => c.userAId === user.userId || c.userBId === user.userId)
