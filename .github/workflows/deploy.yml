@@ -31,3 +31,8 @@ jobs:
 
       - name: Build frontend
         run: npm run build
+
+      - name: Deploy frontend
+        run: aws amplify start-job --app-id "${AMPLIFY_APP_ID}" --branch-name main --job-type RELEASE
+        env:
+          AMPLIFY_APP_ID: ${{ secrets.AMPLIFY_APP_ID || 'd3iagemp3niay5' }}
