@@ -24,14 +24,10 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Build
-        run: npm run build
-        env:
-          VITE_AWS_REGION: ${{ secrets.VITE_AWS_REGION }}
-          VITE_APPSYNC_ENDPOINT: ${{ secrets.VITE_APPSYNC_ENDPOINT }}
-          VITE_APPSYNC_API_KEY: ${{ secrets.VITE_APPSYNC_API_KEY }}
-
       - name: Deploy backend
-        run: npx ampx pipeline-deploy --branch main
+        run: npx ampx pipeline-deploy --branch main --app-id "${AMPLIFY_APP_ID}"
         env:
-          AWS_REGION: ${{ secrets.AWS_REGION }}
+          AMPLIFY_APP_ID: ${{ secrets.AMPLIFY_APP_ID || 'd3iagemp3niay5' }}
+
+      - name: Build frontend
+        run: npm run build

@@ -1,5 +1,7 @@
 node_modules
 dist
+amplify_outputs.json
+.amplify
 dist-ssr
 .env
 .env.local

@@ -5,7 +5,7 @@ Aplicación web para crear una constelación comunitaria durante un Live de TikT
 ## Stack
 
 - **Frontend**: React 19, TypeScript, Vite 8, Tailwind CSS v4, Framer Motion
-- **Backend**: AWS Amplify Gen 2, Cognito, AppSync, DynamoDB On-Demand, Lambda
+- **Backend**: AWS Amplify Gen 2, AppSync, DynamoDB On-Demand, Lambda
 - **Hosting**: AWS Amplify Hosting
 
 ## Requisitos
@@ -24,31 +24,27 @@ npm run dev
 
 ## Variables de entorno
 
-Copiar `.env.example` a `.env` y llenar los valores provistos por Amplify:
+Amplify genera `amplify_outputs.json` automáticamente durante `ampx sandbox` y `ampx pipeline-deploy`. Este archivo contiene la URL y la API key pública de AppSync, está ignorado por Git y no requiere variables `VITE_*`.
+
+Para desarrollo local:
 
 ```bash
-VITE_AWS_REGION=us-east-1
-VITE_USER_POOL_ID=us-east-1_xxxxx
-VITE_USER_POOL_CLIENT_ID=xxxxxxxxxxxxxx
-VITE_APPSYNC_ENDPOINT=https://xxxxxxxxxx.appsync-api.us-east-1.amazonaws.com/graphql
+npx ampx sandbox --once
+npm run dev
 ```
-
-**ADVERTENCIA**: `VITE_*` son valores públicos (visibles desde el navegador). Secretos reales (tokens, API keys, contraseñas) nunca deben estar aquí.
 
 ## Arquitectura
 
 ```
-Usuarios → Amplify Hosting (React + TS) → Cognito (auth)
-                                        → AppSync (GraphQL + Realtime)
+Usuarios → Amplify Hosting (React + TS) → AppSync (GraphQL + Realtime)
+                                            → Lambda (sesiones + lógica)
                                             → DynamoDB On-Demand
-                                            → Lambda (lógica especializada)
 ```
 
 ## Servicios AWS
 
 | Servicio | Uso |
 |----------|-----|
-| Cognito | Autenticación (username + password) |
 | AppSync | API GraphQL con suscripciones realtime |
 | DynamoDB | Almacenamiento On-Demand (sin capacidad provisionada) |
 | Lambda | Lógica de negocio (asignaciones, envío de cartas, etc.) |
@@ -57,11 +53,10 @@ Usuarios → Amplify Hosting (React + TS) → Cognito (auth)
 
 ## Seguridad
 
-- Autorización por Cognito Groups (admins) y claims
-- AppSync con default auth mode = userPool
+- Autenticación sencilla con username, hash scrypt y tokens de sesión en DynamoDB
+- AppSync usa API key pública; las mutaciones sensibles validan el token de sesión en Lambda
 - Mínimo privilegio IAM en todos los roles
-- `senderId` se obtiene del token Cognito, nunca del frontend
-- Las cartas solo son visibles para emisor y receptor
+- `senderId` se obtiene de la sesión, nunca del frontend
 - No se usa `dangerouslySetInnerHTML`
 - Secretos en AWS Parameter Store (SecureString), no en el repo
 - `.env` en `.gitignore`
@@ -77,13 +72,14 @@ npm run lint     # Linting con oxlint
 
 ## Deploy
 
-Push a `main` → GitHub Actions deploys automáticamente a Amplify.
-
-O manual:
+El backend de producción usa la app Amplify `d3iagemp3niay5`. La cuenta/región debe estar inicializada una vez con CDK.
 
 ```bash
-npx amplify deploy
+npx cdk bootstrap aws://ACCOUNT_ID/us-east-1
+CI=1 npx ampx pipeline-deploy --branch main --app-id d3iagemp3niay5
 ```
+
+Después, un push a `main` ejecuta GitHub Actions y Amplify Hosting. GitHub requiere `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` y `AWS_REGION`; `AMPLIFY_APP_ID` es opcional porque el workflow tiene el ID actual como valor predeterminado.
 
 ## Estructura del proyecto
 
@@ -101,7 +97,7 @@ src/
     ui/Modal.tsx              # Modal reutilizable
     ui/StarColorPicker.tsx    # Selector de color de estrella
   hooks/
-    useAuth.ts                # Hook de autenticación Cognito
+    useAuth.ts                # Hook de autenticación por sesión
     useConstellation.ts       # Hook de estado de la constelación
     useLetters.ts             # Hook de cartas y asignaciones
     useEvent.ts               # Hook de estado del evento
@@ -113,14 +109,15 @@ src/
   types/index.ts             # Tipos compartidos
 amplify/
   backend.ts                  # Definición del backend Amplify Gen 2
-  auth/resource.ts            # Configuración de Cognito
   data/resource.ts            # Schema de AppSync + resolvers
   functions/                  # Lambda handlers
 ```
 
 ## Modelos DynamoDB
 
-- `UserProfile` - Perfil de usuario (username, starColor, posición)
+- `UserProfile` - Perfil público (username, starColor, posición)
+- `UserCredential` - Username único y hash de contraseña, sin operaciones GraphQL públicas
+- `Session` - Tokens de sesión, sin operaciones GraphQL públicas
 - `Letter` - Cartas (COMMUNITY o DIRECT)
 - `Connection` - Conexiones entre usuarios (letterCount, sin líneas duplicadas)
 - `CommunityAssignment` - Asignación uno-a-uno para carta comunitaria (derangement)

@@ -1,7 +1,7 @@
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import {
   DynamoDBDocumentClient,
-  ScanCommand,
+  GetCommand,
   PutCommand,
 } from '@aws-sdk/lib-dynamodb';
 import { randomBytes, scryptSync, timingSafeEqual } from 'crypto';
@@ -30,25 +30,24 @@ export async function handler(event: any) {
     if (!password) throw new Error('Contraseña requerida');
 
     const tableUserProfile = process.env.TABLE_USERPROFILE!;
+    const tableUserCredential = process.env.TABLE_USERCREDENTIAL!;
     const tableSession = process.env.TABLE_SESSION!;
 
-    // Scan for user by username
-    const scanRes = await client.send(new ScanCommand({
-      TableName: tableUserProfile,
-      FilterExpression: '#uname = :username',
-      ExpressionAttributeNames: { '#uname': 'username' },
-      ExpressionAttributeValues: { ':username': username.trim() },
-      Limit: 1,
+    const credentialRes = await client.send(new GetCommand({
+      TableName: tableUserCredential,
+      Key: { username: username.trim().toLowerCase() },
     }));
-
-    const user = scanRes.Items?.[0];
-    if (!user || !user.passwordHash) {
+    const credential = credentialRes.Item;
+    if (!credential || !verifyPassword(password, credential.passwordHash)) {
       throw new Error('Usuario o contraseña incorrectos');
     }
 
-    if (!verifyPassword(password, user.passwordHash)) {
-      throw new Error('Usuario o contraseña incorrectos');
-    }
+    const userRes = await client.send(new GetCommand({
+      TableName: tableUserProfile,
+      Key: { id: credential.userId },
+    }));
+    const user = userRes.Item;
+    if (!user) throw new Error('Usuario no encontrado');
 
     // Create session token
     const token = generateToken();

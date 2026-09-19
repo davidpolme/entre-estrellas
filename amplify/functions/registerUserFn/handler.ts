@@ -21,8 +21,9 @@ function generateToken(): string {
 export async function handler(event: any) {
   try {
     const { username, password, starColor } = event.arguments;
+    const normalizedUsername = username?.trim().toLowerCase();
 
-    if (!username?.trim()) throw new Error('Nombre de usuario requerido');
+    if (!normalizedUsername) throw new Error('Nombre de usuario requerido');
     if (!password || password.length < 6) throw new Error('La contraseña debe tener al menos 6 caracteres');
     if (!starColor) throw new Error('Color de estrella requerido');
 
@@ -30,6 +31,7 @@ export async function handler(event: any) {
     if (!validColors.includes(starColor)) throw new Error('Color inválido');
 
     const tableUserProfile = process.env.TABLE_USERPROFILE!;
+    const tableUserCredential = process.env.TABLE_USERCREDENTIAL!;
     const tableSession = process.env.TABLE_SESSION!;
     const tableEvent = process.env.TABLE_EVENT!;
 
@@ -42,13 +44,22 @@ export async function handler(event: any) {
     const x = ((hashCode % 100) / 100) * 0.3 + 0.35;
     const y = ((hashCode * 7 % 100) / 100) * 0.3 + 0.35;
 
-    // Create UserProfile
+    await client.send(new PutCommand({
+      TableName: tableUserCredential,
+      Item: {
+        username: normalizedUsername,
+        userId,
+        passwordHash,
+        createdAt: now,
+      },
+      ConditionExpression: 'attribute_not_exists(username)',
+    }));
+
     await client.send(new PutCommand({
       TableName: tableUserProfile,
       Item: {
         id: userId,
         username: username.trim(),
-        passwordHash,
         starColor,
         x,
         y,
@@ -59,7 +70,6 @@ export async function handler(event: any) {
       ConditionExpression: 'attribute_not_exists(id)',
     }));
 
-    // Create session
     await client.send(new PutCommand({
       TableName: tableSession,
       Item: {
@@ -70,7 +80,6 @@ export async function handler(event: any) {
       ConditionExpression: 'attribute_not_exists(token)',
     }));
 
-    // Create Event table entry if not exists
     try {
       await client.send(new PutCommand({
         TableName: tableEvent,

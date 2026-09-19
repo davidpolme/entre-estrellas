@@ -65,7 +65,7 @@ allFunctions.forEach(fn => {
 // Pass table names to all functions
 allFunctions.forEach(fn => {
   Object.entries(tableMap).forEach(([key, name]) => {
-    fn.resources.lambda.addEnvironment(key, name);
+    fn.addEnvironment(key, name);
   });
 });
 

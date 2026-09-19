@@ -18,7 +18,6 @@ const schema = a.schema({
     .model({
       id: a.id().required(),
       username: a.string().required(),
-      passwordHash: a.string(),
       starColor: a.ref('StarColor').required(),
       x: a.float(),
       y: a.float(),
@@ -26,6 +25,18 @@ const schema = a.schema({
       isAdmin: a.boolean().default(false),
       createdAt: a.datetime().required(),
     })
+    .disableOperations(['mutations'])
+    .authorization(allow => [allow.publicApiKey()]),
+
+  UserCredential: a
+    .model({
+      username: a.string().required(),
+      userId: a.id().required(),
+      passwordHash: a.string().required(),
+      createdAt: a.datetime().required(),
+    })
+    .identifier(['username'])
+    .disableOperations(['queries', 'mutations', 'subscriptions'])
     .authorization(allow => [allow.publicApiKey()]),
 
   Session: a
@@ -34,6 +45,8 @@ const schema = a.schema({
       userId: a.id().required(),
       createdAt: a.datetime().required(),
     })
+    .identifier(['token'])
+    .disableOperations(['queries', 'mutations', 'subscriptions'])
     .authorization(allow => [allow.publicApiKey()]),
 
   Connection: a
@@ -45,6 +58,7 @@ const schema = a.schema({
       createdAt: a.datetime().required(),
       updatedAt: a.datetime().required(),
     })
+    .disableOperations(['mutations'])
     .authorization(allow => [allow.publicApiKey()]),
 
   Letter: a
@@ -57,6 +71,7 @@ const schema = a.schema({
       createdAt: a.datetime().required(),
       readAt: a.datetime(),
     })
+    .disableOperations(['mutations'])
     .authorization(allow => [allow.publicApiKey()]),
 
   CommunityAssignment: a
@@ -67,6 +82,8 @@ const schema = a.schema({
       createdAt: a.datetime().required(),
       completedAt: a.datetime(),
     })
+    .identifier(['senderId'])
+    .disableOperations(['mutations', 'list'])
     .authorization(allow => [allow.publicApiKey()]),
 
   Event: a
@@ -76,6 +93,7 @@ const schema = a.schema({
       startedAt: a.datetime(),
       finishedAt: a.datetime(),
     })
+    .disableOperations(['mutations', 'list'])
     .authorization(allow => [allow.publicApiKey()]),
 
   // Auth mutations
@@ -152,5 +170,8 @@ export const data = defineData({
   schema,
   authorizationModes: {
     defaultAuthorizationMode: 'apiKey',
+    apiKeyAuthorizationMode: {
+      expiresInDays: 30,
+    },
   },
 });
