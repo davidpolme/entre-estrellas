@@ -2,6 +2,7 @@ import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import {
   DynamoDBDocumentClient,
   PutCommand,
+  TransactWriteCommand,
 } from '@aws-sdk/lib-dynamodb';
 import { randomBytes, scryptSync } from 'crypto';
 import { v4 as uuidv4 } from 'uuid';
@@ -44,40 +45,49 @@ export async function handler(event: any) {
     const x = ((hashCode % 100) / 100) * 0.3 + 0.35;
     const y = ((hashCode * 7 % 100) / 100) * 0.3 + 0.35;
 
-    await client.send(new PutCommand({
-      TableName: tableUserCredential,
-      Item: {
-        username: normalizedUsername,
-        userId,
-        passwordHash,
-        createdAt: now,
-      },
-      ConditionExpression: 'attribute_not_exists(username)',
-    }));
-
-    await client.send(new PutCommand({
-      TableName: tableUserProfile,
-      Item: {
-        id: userId,
-        username: username.trim(),
-        starColor,
-        x,
-        y,
-        communityLetterCompleted: false,
-        isAdmin: false,
-        createdAt: now,
-      },
-      ConditionExpression: 'attribute_not_exists(id)',
-    }));
-
-    await client.send(new PutCommand({
-      TableName: tableSession,
-      Item: {
-        token,
-        userId,
-        createdAt: now,
-      },
-      ConditionExpression: 'attribute_not_exists(token)',
+    await client.send(new TransactWriteCommand({
+      TransactItems: [
+        {
+          Put: {
+            TableName: tableUserCredential,
+            Item: {
+              username: normalizedUsername,
+              userId,
+              passwordHash,
+              createdAt: now,
+            },
+            ConditionExpression: 'attribute_not_exists(username)',
+          },
+        },
+        {
+          Put: {
+            TableName: tableUserProfile,
+            Item: {
+              id: userId,
+              username: username.trim(),
+              starColor,
+              x,
+              y,
+              communityLetterCompleted: false,
+              isAdmin: false,
+              createdAt: now,
+            },
+            ConditionExpression: 'attribute_not_exists(id)',
+          },
+        },
+        {
+          Put: {
+            TableName: tableSession,
+            Item: {
+              token,
+              userId,
+              createdAt: now,
+            },
+            ConditionExpression: 'attribute_not_exists(#token)',
+            ExpressionAttributeNames: { '#token': 'token' },
+          },
+        },
+      ],
     }));
 
     try {
@@ -110,6 +120,9 @@ export async function handler(event: any) {
     };
   } catch (error: any) {
     console.error('registerUser error:', error);
+    if (error?.name === 'TransactionCanceledException') {
+      throw new Error('Ese nombre de usuario ya está registrado');
+    }
     throw error;
   }
 }

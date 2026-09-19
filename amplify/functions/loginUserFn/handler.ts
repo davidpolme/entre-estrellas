@@ -60,7 +60,8 @@ export async function handler(event: any) {
         userId: user.id,
         createdAt: now,
       },
-      ConditionExpression: 'attribute_not_exists(token)',
+      ConditionExpression: 'attribute_not_exists(#token)',
+      ExpressionAttributeNames: { '#token': 'token' },
     }));
 
     return {
