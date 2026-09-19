@@ -60,7 +60,8 @@ export function useEvent() {
         query: GET_ADMIN_STATS,
         variables: { sessionToken },
       }) as any;
-      setAdminStats(res.data.getAdminStats ?? null);
+      const stats = res.data.getAdminStats;
+      setAdminStats(typeof stats === 'string' ? JSON.parse(stats) : stats ?? null);
     } catch {
       // Not admin or not configured
     }

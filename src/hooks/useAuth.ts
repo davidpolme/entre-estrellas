@@ -13,6 +13,10 @@ interface AuthUser {
 
 const SESSION_KEY = 'entre_estrellas_session';
 
+function parseJsonResult<T>(value: T | string): T {
+  return typeof value === 'string' ? JSON.parse(value) as T : value;
+}
+
 export function useAuth() {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [loading, setLoading] = useState(true);
@@ -24,7 +28,7 @@ export function useAuth() {
         query: GET_USER_BY_SESSION_TOKEN,
         variables: { sessionToken: token },
       }) as any);
-      const userData = res.data.getUserBySessionToken;
+      const userData = parseJsonResult<any>(res.data.getUserBySessionToken);
       setUser({
         userId: userData.id,
         username: userData.username,
@@ -56,7 +60,7 @@ export function useAuth() {
       query: LOGIN_USER,
       variables: { username, password },
     }) as any);
-    const { token, user: userData } = res.data.loginUser;
+    const { token, user: userData } = parseJsonResult<any>(res.data.loginUser);
     localStorage.setItem(SESSION_KEY, token);
     setSessionToken(token);
     setUser({
@@ -72,7 +76,7 @@ export function useAuth() {
       query: REGISTER_USER,
       variables: { username, password, starColor },
     }) as any);
-    const { token, user: userData } = res.data.registerUser;
+    const { token, user: userData } = parseJsonResult<any>(res.data.registerUser);
     localStorage.setItem(SESSION_KEY, token);
     setSessionToken(token);
     setUser({
