@@ -32,6 +32,6 @@ jobs:
           VITE_APPSYNC_API_KEY: ${{ secrets.VITE_APPSYNC_API_KEY }}
 
       - name: Deploy backend
-        run: npx amplify pipeline-deploy --branch main
+        run: npx ampx pipeline-deploy --branch main
         env:
           AWS_REGION: ${{ secrets.AWS_REGION }}
