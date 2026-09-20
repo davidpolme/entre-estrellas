@@ -22,6 +22,7 @@ const schema = a.schema({
       x: a.float(),
       y: a.float(),
       communityLetterCompleted: a.boolean().required().default(false),
+      sentLetterCount: a.integer().required().default(0),
       isAdmin: a.boolean().default(false),
       createdAt: a.datetime().required(),
     })
@@ -103,6 +104,12 @@ const schema = a.schema({
     .returns(a.json().required())
     .authorization(allow => [allow.publicApiKey()])
     .handler(a.handler.function(registerUserFn)),
+
+  onUserRegistered: a
+    .subscription()
+    .for(a.ref('registerUser'))
+    .authorization(allow => [allow.publicApiKey()])
+    .handler(a.handler.custom({ entry: './onUserRegistered.js' })),
 
   loginUser: a
     .mutation()

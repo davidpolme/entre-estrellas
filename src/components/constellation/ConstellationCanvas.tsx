@@ -52,20 +52,26 @@ export function ConstellationCanvas({
       positions[currentUser.id] = { x: cx, y: cy };
     }
 
-    others.forEach((user, i) => {
-      if (user.x && user.y && user.x !== 0 && user.y !== 0) {
-        positions[user.id] = {
-          x: cx + (user.x - 0.5) * radius * 2,
-          y: cy + (user.y - 0.5) * radius * 2,
+    const goldenAngle = Math.PI * (3 - Math.sqrt(5));
+    const minimumSpacing = dimensions.width < 500 ? 34 : 44;
+    const sortedOthers = [...others].sort((first, second) => first.id.localeCompare(second.id));
+
+    sortedOthers.forEach((user, index) => {
+      let candidate = { x: cx, y: cy };
+      for (let attempt = 0; attempt < 200; attempt++) {
+        const pointIndex = index + attempt;
+        const angle = pointIndex * goldenAngle;
+        const distance = Math.min(radius, minimumSpacing * Math.sqrt(pointIndex + 1));
+        candidate = {
+          x: cx + Math.cos(angle) * distance,
+          y: cy + Math.sin(angle) * distance,
         };
-      } else {
-        const angle = (2 * Math.PI * i) / others.length;
-        const r = radius * (0.6 + ((user.id.charCodeAt(0) % 5) / 10));
-        positions[user.id] = {
-          x: cx + Math.cos(angle) * r,
-          y: cy + Math.sin(angle) * r,
-        };
+        const hasSpace = Object.values(positions).every(position =>
+          Math.hypot(candidate.x - position.x, candidate.y - position.y) >= minimumSpacing
+        );
+        if (hasSpace) break;
       }
+      positions[user.id] = candidate;
     });
 
     return positions;
@@ -99,9 +105,6 @@ export function ConstellationCanvas({
     ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
 
     const positions = layoutPositions();
-    const relevantConnections = selectedUserId
-      ? connections.filter(c => c.userAId === selectedUserId || c.userBId === selectedUserId)
-      : connections;
 
     ctx.clearRect(0, 0, dimensions.width, dimensions.height);
 
@@ -149,11 +152,12 @@ export function ConstellationCanvas({
       const isCurrent = userId === currentUserId;
 
       const color = STAR_COLOR_MAP[user.starColor] ?? '#ffffff';
-      const starRadius = isSelected ? 10 : (isCurrent ? 9 : 7);
-      const glowRadius = isSelected ? 25 : (isCurrent ? 20 : 12);
+      const activityBoost = Math.min(12, (user.sentLetterCount ?? 0) * 1.5);
+      const starRadius = (isSelected ? 10 : (isCurrent ? 9 : 7)) + Math.min(3, activityBoost * 0.2);
+      const glowRadius = (isSelected ? 25 : (isCurrent ? 20 : 12)) + activityBoost;
 
       const gradient = ctx.createRadialGradient(pos.x, pos.y, 0, pos.x, pos.y, glowRadius);
-      gradient.addColorStop(0, isSelected ? color : `${color}80`);
+      gradient.addColorStop(0, isSelected ? color : `${color}${Math.min(220, 128 + (user.sentLetterCount ?? 0) * 15).toString(16).padStart(2, '0')}`);
       gradient.addColorStop(1, 'transparent');
       ctx.beginPath();
       ctx.arc(pos.x, pos.y, glowRadius, 0, Math.PI * 2);

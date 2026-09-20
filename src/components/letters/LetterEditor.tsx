@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { COMMUNITY_PROMPTS, DIRECT_PROMPTS } from '@/types';
 
@@ -13,9 +13,17 @@ export function LetterEditor({ type, recipientName, onSend, onCancel }: LetterEd
   const [content, setContent] = useState('');
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
+  const [promptIndex, setPromptIndex] = useState(0);
   const maxLength = 2000;
   const prompts = type === 'community' ? COMMUNITY_PROMPTS : DIRECT_PROMPTS;
-  const randomPrompt = prompts[Math.floor(Math.random() * prompts.length)];
+  const prompt = prompts[promptIndex % prompts.length];
+
+  useEffect(() => {
+    const interval = window.setInterval(() => {
+      setPromptIndex(previous => (previous + 1) % prompts.length);
+    }, 5000);
+    return () => window.clearInterval(interval);
+  }, [prompts.length]);
 
   async function handleSend() {
     if (!content.trim() || sending) return;
@@ -70,7 +78,14 @@ export function LetterEditor({ type, recipientName, onSend, onCancel }: LetterEd
         </p>
       )}
 
-      <p className="text-white/40 text-sm italic">💡 {randomPrompt}</p>
+      <button
+        type="button"
+        onClick={() => setPromptIndex(previous => (previous + 1) % prompts.length)}
+        className="w-full text-left text-white/40 hover:text-white/60 text-sm italic transition-colors"
+        title="Mostrar otra idea"
+      >
+        💡 {prompt} <span className="not-italic text-xs">(otra idea)</span>
+      </button>
 
       <div className="relative">
         <textarea

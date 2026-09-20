@@ -63,6 +63,14 @@ export async function handler(event: any) {
           ConditionExpression: 'attribute_not_exists(id)',
         },
       },
+      {
+        Update: {
+          TableName: tableUserProfile,
+          Key: { id: senderId },
+          UpdateExpression: 'ADD sentLetterCount :inc',
+          ExpressionAttributeValues: { ':inc': 1 },
+        },
+      },
     ];
 
     const connectionsRes = await client.send(new ScanCommand({

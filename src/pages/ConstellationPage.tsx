@@ -27,6 +27,7 @@ export function ConstellationPage({ isAdmin, username, userId, onLogout, onAdmin
   const [letterRecipient, setLetterRecipient] = useState<{ id: string; name: string } | null>(null);
   const [showInbox, setShowInbox] = useState(false);
   const [showNav, setShowNav] = useState(false);
+  const [lastNotifiedUnreadCount, setLastNotifiedUnreadCount] = useState(0);
 
   const communityCompleted = assignment?.completed ?? false;
 
@@ -35,6 +36,11 @@ export function ConstellationPage({ isAdmin, username, userId, onLogout, onAdmin
       setShowCommunityPrompt(true);
     }
   }, [status, communityCompleted, lettersLoading]);
+
+  useEffect(() => {
+    if (unreadCount > lastNotifiedUnreadCount) setShowInbox(true);
+    setLastNotifiedUnreadCount(unreadCount);
+  }, [unreadCount, lastNotifiedUnreadCount]);
 
   const currentUserProfile = users.find(u => u.id === userId);
 
@@ -96,12 +102,25 @@ export function ConstellationPage({ isAdmin, username, userId, onLogout, onAdmin
         )}
       </div>
 
+      <button
+        onClick={() => { selectUser(userId); setShowInbox(true); }}
+        className="fixed right-4 top-1/2 -translate-y-1/2 z-40 w-14 h-14 rounded-full bg-blue-500/20 backdrop-blur-md border border-blue-300/20 text-blue-200 shadow-lg shadow-blue-500/20 flex items-center justify-center text-xl active:scale-95 transition-transform sm:hidden"
+        aria-label="Abrir mis cartas"
+      >
+        ✉
+        {unreadCount > 0 && (
+          <span className="absolute -top-1 -right-1 min-w-5 h-5 px-1 rounded-full bg-red-500 text-white text-xs flex items-center justify-center">
+            {unreadCount}
+          </span>
+        )}
+      </button>
+
       {/* Bottom bar */}
       <div className="absolute bottom-0 left-0 right-0 z-30 p-4">
         <div className="flex items-center justify-center gap-4">
           <button
             onClick={() => { selectUser(userId); setShowInbox(true); }}
-            className="px-5 py-2.5 rounded-full bg-white/10 backdrop-blur-md border border-white/10 text-white/80 text-sm active:scale-95 transition-transform"
+            className="hidden sm:block px-5 py-2.5 rounded-full bg-white/10 backdrop-blur-md border border-white/10 text-white/80 text-sm active:scale-95 transition-transform"
           >
             Mis cartas {unreadCount > 0 && `(${unreadCount})`}
           </button>

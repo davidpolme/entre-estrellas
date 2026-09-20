@@ -18,6 +18,7 @@ export const LIST_USERS = `
         starColor
         x
         y
+        sentLetterCount
       }
     }
   }
@@ -149,13 +150,7 @@ export const MARK_LETTER_READ = `
 
 export const ON_USER_JOINED = `
   subscription OnUserJoined {
-    onCreateUserProfile {
-      id
-      username
-      starColor
-      x
-      y
-    }
+    onUserRegistered
   }
 `;
 

@@ -20,6 +20,7 @@ export interface ConstellationUser {
   starColor: StarColor;
   x: number;
   y: number;
+  sentLetterCount: number;
 }
 
 export interface Connection {

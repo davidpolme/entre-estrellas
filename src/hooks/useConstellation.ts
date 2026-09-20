@@ -59,12 +59,19 @@ export function useConstellation() {
       try {
         userSub = (client as any).graphql({ query: ON_USER_JOINED }).subscribe({
           next: (event: any) => {
-            const newUser = event.data.onCreateUserProfile ?? event.data.onUserJoined;
-            if (newUser) {
-              setData(prev => ({
-                ...prev,
-                users: [...prev.users.filter(u => u.id !== newUser.id), newUser],
-              }));
+            const registration = event.data.onUserRegistered;
+            if (!registration) return;
+            try {
+              const result = typeof registration === 'string' ? JSON.parse(registration) : registration;
+              const newUser = result.user;
+              if (newUser) {
+                setData(prev => ({
+                  ...prev,
+                  users: [...prev.users.filter(existing => existing.id !== newUser.id), newUser],
+                }));
+              }
+            } catch {
+              fetchConstellation();
             }
           },
         });
@@ -98,12 +105,14 @@ export function useConstellation() {
     }
 
     setupSubscriptions();
+    const refreshInterval = window.setInterval(fetchConstellation, 10000);
     return () => {
       userSub?.unsubscribe();
       connSub?.unsubscribe();
       connUpdSub?.unsubscribe();
+      window.clearInterval(refreshInterval);
     };
-  }, []);
+  }, [fetchConstellation]);
 
   const selectUser = useCallback((userId: string | null) => {
     setSelectedUserId(userId);

@@ -34,6 +34,7 @@ export async function handler(event: any) {
     const tableAssignment = process.env.TABLE_COMMUNITYASSIGNMENT!;
     const tableLetter = process.env.TABLE_LETTER!;
     const tableConnection = process.env.TABLE_CONNECTION!;
+    const tableUserProfile = process.env.TABLE_USERPROFILE!;
 
     const eventRes = await client.send(new GetCommand({
       TableName: tableEvent,
@@ -85,6 +86,14 @@ export async function handler(event: any) {
             ':true': true,
             ':completedAt': now,
           },
+        },
+      },
+      {
+        Update: {
+          TableName: tableUserProfile,
+          Key: { id: senderId },
+          UpdateExpression: 'ADD sentLetterCount :inc',
+          ExpressionAttributeValues: { ':inc': 1 },
         },
       },
     ];
