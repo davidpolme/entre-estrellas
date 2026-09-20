@@ -187,14 +187,18 @@ export function ConstellationCanvas({
         ctx.stroke();
       }
 
+      const maxLabelCharacters = 10;
+      const label = user.username.length > maxLabelCharacters
+        ? `${user.username.slice(0, maxLabelCharacters - 1)}…`
+        : user.username;
       ctx.font = `${isCurrent || isSelected ? 600 : 400} 12px system-ui, sans-serif`;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'top';
       ctx.lineWidth = 3;
       ctx.strokeStyle = 'rgba(3, 7, 18, 0.9)';
-      ctx.strokeText(user.username, pos.x, pos.y + starRadius + 7);
+      ctx.strokeText(label, pos.x, pos.y + starRadius + 7);
       ctx.fillStyle = isCurrent || isSelected ? 'rgba(255, 255, 255, 0.95)' : 'rgba(255, 255, 255, 0.75)';
-      ctx.fillText(user.username, pos.x, pos.y + starRadius + 7);
+      ctx.fillText(label, pos.x, pos.y + starRadius + 7);
     });
 
     ctx.restore();
